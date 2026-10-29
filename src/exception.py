@@ -1,5 +1,6 @@
 from types import ModuleType, TracebackType
 from typing import Union, Dict, Any
+from src.logger import logging 
 
 def error_message_details(error, error_detail: Any):
     # Read the traceback for the exception currently being handled.
