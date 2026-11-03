@@ -1,0 +1,7 @@
+venv
+.git
+logs
+notebook
+**/__pycache__
+**/*.pyc
+.vscode
