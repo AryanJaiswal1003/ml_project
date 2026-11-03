@@ -8,17 +8,19 @@ from src.logger import logging
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
 
-from src.components.data_transformation import DataTransformation, DataTransformationConfig
+from src.components.data_transformation import DataTransformation
+from src.components.model_trainer import ModelTrainerConfig, ModelTrainer
 
-# This file is the first step of the project.
-# It reads the original student table, keeps a full copy, and writes two smaller files:
-# one for training a model and one for testing that model.
-# The next step, data transformation, opens those two files. It does not receive the tables directly.
+# Workflow when this file is started directly:
+# 1. Read the student CSV and write artifacts/data.csv, train.csv, and test.csv.
+# 2. Data transformation turns those files into numeric arrays and saves artifacts/preprocessor.pkl.
+# 3. Model training fits several models, keeps the best one in artifacts/model.pkl,
+#    and prints that model's test R2 score.
 
 
 # Output locations for the three CSV files.
 # dataclass fills these paths in automatically, so this class does not need its own __init__.
-# All three files go in the artifacts folder, next to the project root when you run from D:\ML-PROJECT.
+# All three files go in the artifacts folder when you run from the project root.
 @dataclass
 class DataIngestionConfig:
     train_data_path: str = os.path.join('artifacts', "train.csv")
@@ -33,12 +35,13 @@ class DataIngestion:
 
     def initiate_data_ingestion(self):
         '''
-        Load notebook/data/stud.csv.
+        Step 1 of the project.
 
+        Load notebook/data/stud.csv.
         Save every row as artifacts/data.csv.
-        Then hold out 20 percent of the rows as artifacts/test.csv
-        and write the other 80 percent as artifacts/train.csv.
-        Return those two paths.
+        Hold out 20 percent of the rows as artifacts/test.csv.
+        Write the other 80 percent as artifacts/train.csv.
+        Return those two paths. The tables themselves stay in the files.
         '''
         logging.info("Entered the Data Ingestion Method or Component")
 
@@ -54,7 +57,7 @@ class DataIngestion:
             # exist_ok=True means a second run does not crash when the folder already exists.
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok = True)
 
-            # Save the full table before the split.
+            # Save the full table before the split, so the original rows stay available.
             # index=False leaves out the pandas row numbers.
             # header=True keeps the column names in the first line of the file.
             df.to_csv(self.ingestion_config.raw_data_path, index = False, header = True)
@@ -74,7 +77,7 @@ class DataIngestion:
             logging.info("Data Ingestion Completed")
 
             # Return paths, not the tables.
-            # Data transformation will open train.csv and test.csv from these paths.
+            # Data transformation opens train.csv and test.csv from these paths.
             return (
                 self.ingestion_config.train_data_path,
                 self.ingestion_config.test_data_path
@@ -89,11 +92,16 @@ class DataIngestion:
 # python src/components/data_ingestion.py
 # Importing DataIngestion from another file does not run the lines below.
 if __name__ == '__main__':
-    # Write artifacts/data.csv, artifacts/train.csv, and artifacts/test.csv.
+    # Step 1. Write artifacts/data.csv, artifacts/train.csv, and artifacts/test.csv.
     obj = DataIngestion()
     train_data, test_data = obj.initiate_data_ingestion()
 
-    # Hand the two paths to the next step.
-    # That step encodes the columns and saves artifacts/preprocessor.pkl.
+    # Step 2. Encode the columns.
+    # train_arr and test_arr are numeric tables. math_score is the last column of each.
+    # The third return value is the preprocessor path. It is unused here, so it is named _.
     data_transformation = DataTransformation()
-    data_transformation.initiate_data_transformation(train_data, test_data)
+    train_arr, test_arr, _ = data_transformation.initiate_data_transformation(train_data, test_data)
+
+    # Step 3. Fit the models, save the best one, and print its test R2 score.
+    model_trainer = ModelTrainer()
+    print(model_trainer.initiate_model_trainer(train_arr, test_arr))
