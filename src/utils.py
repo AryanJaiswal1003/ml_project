@@ -7,6 +7,7 @@ import pandas as pd
 
 from src.exception import CustomException
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
 
 def save_object(file_path, obj):
     '''
@@ -35,7 +36,7 @@ def save_object(file_path, obj):
         raise CustomException(e, sys)
 
 
-def evaluate_model(X_train, y_train, X_test, y_test, models):
+def evaluate_model(X_train, y_train, X_test, y_test, models, param):
     '''
     Train every model in the dictionary and score it on the test rows.
 
@@ -53,7 +54,14 @@ def evaluate_model(X_train, y_train, X_test, y_test, models):
         # Walk the dictionary by position so the name and the model stay paired.
         for i in range(len(list(models))):
             model = list(models.values())[i]
+            params = param[list(models.keys())[i]]
+
+            grid_search = GridSearchCV(model, params, cv = 3)
+            grid_search.fit(X_train, y_train)
+
+
             # fit teaches this model using the training rows only.
+            model.set_params(**grid_search.best_params_)
             model.fit(X_train, y_train)
 
             # Predict math_score for the rows the model has seen and for the held-out rows.
